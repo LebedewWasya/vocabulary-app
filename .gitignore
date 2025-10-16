@@ -1,0 +1,175 @@
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Vite
+dist/
+.vite/
+
+# Build outputs
+build/
+out/
+
+# TypeScript
+tsconfig.tsbuildinfo
+
+# IDE / Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*.swn
+*.tmp
+*.log
+.DS_Store
+
+# Environment variables
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+
+# Logs
+logs
+logs/*.log
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Directory for instrumented app source
+instrumented/
+
+# Serverless
+.serverless/
+
+# Webpack
+webpack-stats.json
+
+# React Native
+android/
+ios/
+
+# Android Studio
+*.apk
+*.ap_
+*.aab
+
+# Gradle
+.gradle/
+build.gradle
+settings.gradle
+
+# Maven
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+
+# Docker
+Dockerfile
+docker-compose.yml
+docker-compose.override.yml
+docker-compose.prod.yml
+docker-compose.dev.yml
+
+# Database
+*.sqlite
+*.sqlite3
+*.db
+*.db3
+
+# Local development
+local-storage/
+cache/
+temp/
+
+# OS generated files
+Thumbs.db
+desktop.ini
+
+# VS Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Eclipse
+.classpath
+.project
+.settings/
+
+# NetBeans
+nbproject/private/
+build/
+nbbuild/
+dist/
+nbdist/
+.nb-gradle/
+
+# Visual Studio
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Windows
+$RECYCLE.BIN/
+Thumbs.db
+Desktop.ini
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Linux
+*~
+
+# Temporary files
+*.tmp
+*.bak
+*.old
+*.orig
+
+# Logs and Dumps
+logs/
+*.log
+*.dump
+*.err
+
+# Coverage reports
+coverage/
+**/coverage/**/*.*
+**/.nyc_output/**
+
+# TypeScript build output
+dist/
+out/
+build/
+lib/
+es/
+cjs/
+umd/
+types/
+
+# Vite specific
+.vite/
+dist/
