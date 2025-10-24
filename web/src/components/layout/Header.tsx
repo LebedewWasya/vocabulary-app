@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 
-export default function Header() {
+export default function Header({ title }: { title?: string }) {
   const { getUser, logout } = useAuth()
   const navigate = useNavigate()
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -36,6 +36,13 @@ export default function Header() {
         >
           V-App
         </div>
+
+        {/* Центр: опциональный заголовок */}
+        {title ? (
+        <div className="absolute left-1/2 transform -translate-x-1/2 text-lg font-semibold text-gray-800">
+          {title}
+        </div>
+        ) : null}
 
         {/* Правая часть: аватарка + иконки */}
         <div className="flex items-center space-x-3">
