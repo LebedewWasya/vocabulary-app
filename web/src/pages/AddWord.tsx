@@ -1,19 +1,33 @@
-import { useState } from 'react'
-import { wordsApi } from '../api/client'
+import { useState, useEffect } from 'react';
+import { X } from 'lucide-react';
+import { wordsApi } from '../api/client';
+import type { Word, PartOfSpeech } from '../types';
 
+const BASIC_COUNT_WORD_ON_PAGE : number = 5;
+const ENABLE_LOGGING : boolean = true;
+
+function log(message: string): void {
+  if (ENABLE_LOGGING) {
+    console.log(message);
+  }
+}
 
 export default function AddWord() {
-  // Состояние формы
-  const [englishWord, setEnglishWord] = useState('')
-  const [isPhrase, setIsPhrase] = useState(false) // Новое состояние для словосочетания
-  const [comment, setComment] = useState('') // Новое состояние для комментария
 
-  // Все части речи
-  type PartOfSpeech = 'noun' | 'verb' | 'adjective' | 'pronoun' | 'adverb' | 'preposition' | 'conjunction' | 'interjection' | 'phrase'
-  
-  const [activeTab, setActiveTab] = useState<PartOfSpeech>('noun')
-  
-  const [translations, setTranslations] = useState<Record<PartOfSpeech, string[]>>({
+  const SPEECH_PART_KEYS = [
+  'noun', 'verb', 'adjective', 'pronoun', 'adverb',
+  'preposition', 'conjunction', 'interjection', 'phrase'] as const;
+  // Определяем тип ключей
+  type SpeechPartKey = typeof SPEECH_PART_KEYS[number];
+
+
+  const [englishWord, setEnglishWord] = useState('');
+  const [isPhrase, setIsPhrase] = useState(false);
+  const [comment, setComment] = useState('');
+  // Состояние вкладки
+  const [activeTab, setActiveTab] = useState<SpeechPartKey>('noun');
+  // Состояние переводов
+  const [translations, setTranslations] = useState<Record<SpeechPartKey, string[]>>({
     phrase: [],
     noun: [],
     verb: [],
@@ -22,77 +36,205 @@ export default function AddWord() {
     adverb: [],
     preposition: [],
     conjunction: [],
-    interjection: []
-  })
+    interjection: [],
+  });
 
-  // Мок-данные слов
-  const words = [
-    {
-      word: 'run',
-      comment: 'Часто используется в спорте',
-      entries: [
-        { partOfSpeech: 'гл.', proficiency: 2, translations: ['бегать', 'работать'] },
-        { partOfSpeech: 'сущ.', proficiency: 0, translations: ['бег', 'пробежка'] }
-      ]
-    },
-    {
-      word: 'book',
-      comment: 'Многозначное слово',
-      entries: [
-        { partOfSpeech: 'сущ.', proficiency: 5, translations: ['книга'] },
-        { partOfSpeech: 'гл.', proficiency: 1, translations: ['бронировать', 'заказывать'] }
-      ]
+  // Состояние списка слов
+  const [words, setWords] = useState<Word[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingWordId, setEditingWordId] = useState<string | null>(null);
+
+  // Модальные состояния
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [wordToDelete, setWordToDelete] = useState<string | null>(null);
+  const [errorModal, setErrorModal] = useState<{ show: boolean; message: string }>({
+    show: false,
+    message: '',
+  });
+
+  // Загрузка слов
+  const loadWords = async (query = '') => {
+    log("loadWords CALLED")
+    setLoading(true);
+    try {
+      const loaded = await wordsApi.getWordsSortedByChengeTime(BASIC_COUNT_WORD_ON_PAGE, query);
+      setWords(loaded);
+    } catch (err: any) {
+      showError(err.message);
+    } finally {
+      setLoading(false);
     }
-  ]
+  };
 
-  // Добавить перевод
+  useEffect(() => {
+    log("useEffect on searchQuery CALLED")
+    loadWords(searchQuery);
+  }, [searchQuery]);
+
+  const showError = (message: string) => {
+    setErrorModal({
+      show: true,
+      message: `Извините, что-то пошло не так.\n${message}\n\nОбратитесь за помощью к разработчику.`,
+    });
+  };
+
+  // Добавить перевод к части речи
   const addTranslation = () => {
-    if (!englishWord.trim()) return
+    log("addTranslation CALLED")
+    if (!englishWord.trim()) return;
+    setTranslations((prev) => ({
+      ...prev,
+      [activeTab]: [...prev[activeTab], ''],
+    }));
+  };
 
-    const newTranslations = [...translations[activeTab], '']
-    setTranslations({
-      ...translations,
-      [activeTab]: newTranslations
-    })
-  }
-
-  // Удалить перевод
+  // Добавить перевод у части речи
   const removeTranslation = (index: number) => {
-    const newTranslations = translations[activeTab].filter((_, i) => i !== index)
-    setTranslations({
-      ...translations,
-      [activeTab]: newTranslations
-    })
-  }
+    log("removeTranslation CALLED")
+    setTranslations((prev) => {
+      const newTranslations = [...prev[activeTab]];
+      newTranslations.splice(index, 1);
+      return { ...prev, [activeTab]: newTranslations };
+    });
+  };
 
-  // Обновить перевод
   const updateTranslation = (index: number, value: string) => {
-    const newTranslations = [...translations[activeTab]]
-    newTranslations[index] = value
-    setTranslations({
-      ...translations,
-      [activeTab]: newTranslations
-    })
-  }
+    log("updateTranslation CALLED")
+    setTranslations((prev) => {
+      const newTranslations = [...prev[activeTab]];
+      newTranslations[index] = value;
+      return { ...prev, [activeTab]: newTranslations };
+    });
+  };
 
-  // Сохранить слово (заглушка)
-  const saveWord = () => {
-    if (isPhrase) {
-      alert(`Словосочетание "${englishWord}" сохранено с переводом: "${translations.noun[0] || ''}"\nКомментарий: ${comment}`)
-    } else {
-      alert(`Слово "${englishWord}" сохранено с переводами:\n${JSON.stringify(translations, null, 2)}\nКомментарий: ${comment}`)
+  // Сохранение
+  const saveWord = async () => {
+    log("saveWord CALLED")
+    try {
+      const newWord: Word = {
+        id: editingWordId || Date.now().toString(), // TODO В случае сохранения нового слова, должно отправляться пустое значение id в метод saveWord. 
+        spelling: englishWord,
+        comment,
+        memorization: '0',
+        changeTime: new Date(),
+        phrase: { memorization: '0', translations: isPhrase ? translations.noun : [] },
+        noun: { memorization: '0', translations: isPhrase ? [] : translations.noun },
+        verb: { memorization: '0', translations: isPhrase ? [] : translations.verb },
+        adjective: { memorization: '0', translations: isPhrase ? [] : translations.adjective },
+        pronoun: { memorization: '0', translations: isPhrase ? [] : translations.pronoun },
+        adverb: { memorization: '0', translations: isPhrase ? [] : translations.adverb },
+        preposition: { memorization: '0', translations: isPhrase ? [] : translations.preposition },
+        conjunction: { memorization: '0', translations: isPhrase ? [] : translations.conjunction },
+        interjection: { memorization: '0', translations: isPhrase ? [] : translations.interjection },
+      };
+
+      if (isEditing && editingWordId) {
+        await wordsApi.updateWord(editingWordId);
+      } else {
+        await wordsApi.saveWord(newWord);
+      }
+
+      // Сброс формы
+      resetForm();
+      loadWords(searchQuery);
+    } catch (err: any) {
+      showError(err.message);
     }
-    setEnglishWord('')
-    setComment('')
-    setIsPhrase(false)
-    setTranslations({ 
-      noun: [], verb: [], adjective: [], pronoun: [], 
-      adverb: [], preposition: [], conjunction: [], interjection: [], phrase: [] 
-    })
-  }
+  };
 
-  // Маппинг частей речи для отображения
-  const partOfSpeechLabels: Record<PartOfSpeech, string> = {
+  const resetForm = () => {
+    setEnglishWord('');
+    setComment('');
+    setIsPhrase(false);
+    setIsEditing(false);
+    setEditingWordId(null);
+    setActiveTab('noun');
+    setTranslations({
+      phrase: [],
+      noun: [],
+      verb: [],
+      adjective: [],
+      pronoun: [],
+      adverb: [],
+      preposition: [],
+      conjunction: [],
+      interjection: [],
+    });
+  };
+
+  // Редактирование слова
+  const handleEditWord = (word: Word) => {
+    log("handleEditWord CALLED")
+    setEnglishWord(word.spelling);
+    setComment(word.comment);
+    setIsEditing(true);
+    setEditingWordId(word.id);
+
+    // Заполняем переводы
+    const newTranslations = {
+      phrase: word.phrase.translations,
+      noun: word.noun.translations,
+      verb: word.verb.translations,
+      adjective: word.adjective.translations,
+      pronoun: word.pronoun.translations,
+      adverb: word.adverb.translations,
+      preposition: word.preposition.translations,
+      conjunction: word.conjunction.translations,
+      interjection: word.interjection.translations,
+    };
+    setTranslations(newTranslations);
+
+  // Определяем, фраза ли это
+  const isItPhrase = word.phrase.translations.length > 0;
+  setIsPhrase(isItPhrase);
+
+  if (isItPhrase) {
+    setActiveTab('phrase'); // для фразы перевод хранится в noun 
+  } else {
+    // Ищем первую непустую часть речи СРЕДИ допустимых ключей
+    const firstNonEmpty = SPEECH_PART_KEYS
+      .filter(key => key !== 'phrase') // исключаем phrase для слов
+      .find(key => newTranslations[key].length > 0);
+    if (firstNonEmpty) {
+      setActiveTab(firstNonEmpty);
+    } else {
+      log("handleEditWord внезапно ENTER")
+      setActiveTab('noun'); // если нет переводов, берем чуществительное, но на самом деле сюда не должно заходить
+    }
+  }
+};
+
+  // Удаление слова
+  const confirmDelete = (id: string) => {
+    log("confirmDelete CALLED")
+    setWordToDelete(id);
+    setShowDeleteModal(true);
+  };
+
+  const handleDelete = async () => {
+    if (!wordToDelete) return;
+    try {
+      await wordsApi.deleteWord(wordToDelete);
+      setShowDeleteModal(false);
+      setWordToDelete(null);
+      loadWords(searchQuery);
+    } catch (err: any) {
+      showError(err.message);
+    }
+  };
+
+  // Валидация поиска: только английские буквы, пробелы, апострофы // TODO нужно сделать такаие же валидации для ввода слова на английском и для ввода русских слов в переводах. 
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    if (/^[a-zA-Z\s']*$/.test(value)) {
+      setSearchQuery(value);
+    }
+  };
+
+  // Маппинг частей речи
+  const partOfSpeechLabels: Record<SpeechPartKey, string> = {
     noun: 'Существительное',
     verb: 'Глагол',
     adjective: 'Прилагательное',
@@ -100,18 +242,19 @@ export default function AddWord() {
     adverb: 'Наречие',
     preposition: 'Предлог',
     conjunction: 'Союз',
-    interjection: 'Междометие', 
-    phrase: 'phrase'
-  }
+    interjection: 'Междометие',
+    phrase: 'Фраза',
+  };
 
   return (
     <div className="container mx-auto px-6 py-8">
       {/* Заголовок */}
-      <h1 className="text-xl font-bold mb-4">Добавить новое слово</h1>
+      <h1 className="text-xl font-bold mb-4">
+        {isEditing ? 'Изменить слово' : 'Добавить новое слово'}
+      </h1>
 
-      {/* Форма добавления слова */}
+      {/* Форма */}
       <div className="bg-white rounded-lg shadow p-6 mb-8">
-        {/* Поле ввода английского слова */}
         <div className="mb-4">
           <input
             type="text"
@@ -122,7 +265,6 @@ export default function AddWord() {
           />
         </div>
 
-        {/* Чекбокс "Словосочетание" */}
         <div className="mb-4 flex items-center">
           <input
             type="checkbox"
@@ -136,28 +278,29 @@ export default function AddWord() {
           </label>
         </div>
 
-        {/* Вкладки по частям речи (только если не словосочетание) */}
+        {/* Вкладки (без phrase, если не фраза) */}
         {!isPhrase && (
           <>
             <div className="border-b border-gray-200 mb-4">
               <div className="flex flex-wrap gap-2">
-                {Object.entries(partOfSpeechLabels).map(([key, label]) => (
-                  <button
-                    key={key}
-                    onClick={() => setActiveTab(key as PartOfSpeech)}
-                    className={`pb-2 px-3 text-sm font-medium whitespace-nowrap ${
-                      activeTab === key
-                        ? 'border-b-2 border-blue-600 text-blue-600'
-                        : 'text-gray-600 hover:text-gray-800'
-                    }`}
-                  >
-                    {label}
-                  </button>
-                ))}
+                {(Object.entries(partOfSpeechLabels) as [SpeechPartKey, string][])
+                  .filter(([key]) => key !== 'phrase')
+                  .map(([key, label]) => (
+                    <button // Эти баттоны сами вкладки сущ, глагол и тд 
+                      key={key}
+                      onClick={() => setActiveTab(key)}
+                      className={`pb-2 px-3 text-sm font-medium whitespace-nowrap ${
+                        activeTab === key
+                          ? 'border-b-2 border-blue-600 text-blue-600'
+                          : 'text-gray-600 hover:text-gray-800'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
               </div>
             </div>
 
-            {/* Переводы для активной вкладки */}
             <div className="space-y-2 mb-4">
               {translations[activeTab].map((translation, index) => (
                 <div key={index} className="flex items-center space-x-2">
@@ -178,7 +321,6 @@ export default function AddWord() {
               ))}
             </div>
 
-            {/* Кнопка добавить перевод */}
             <div className="mb-4">
               <button
                 onClick={addTranslation}
@@ -190,23 +332,21 @@ export default function AddWord() {
           </>
         )}
 
-        {/* Поле для перевода словосочетания */}
+        {/* Поле для перевода фразы */}
         {isPhrase && (
           <div className="mb-4">
             <input
               type="text"
-              value={translations.noun[0] || ''}
-              onChange={(e) => setTranslations({
-                ...translations,
-                noun: [e.target.value]
-              })}
+              value={translations.phrase[0] || ''} // FIXME тут должно быть именно phrase, а не noun как ты делал
+              onChange={(e) =>
+                setTranslations((prev) => ({ ...prev, phrase: [e.target.value] }))
+              } // TODO сделать возможность ввода нескольких переводов как для других частей речи, и так же кнопку + Добавить перевод
               placeholder="Перевод словосочетания"
               className="w-full p-3 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
         )}
 
-        {/* Поле для комментария */}
         <div className="mb-4">
           <textarea
             value={comment}
@@ -217,39 +357,127 @@ export default function AddWord() {
           />
         </div>
 
-        {/* Кнопка сохранить слово */}
         <button
           onClick={saveWord}
           className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition-colors"
         >
-          Сохранить слово
+          {isEditing ? 'Сохранить изменения' : 'Сохранить слово'}
         </button>
+        {/* TODO добавить кнопку отмены редактирования, думаю что логично будет вызвать метод resetForm */}
       </div>
 
       {/* Список слов */}
+      {/* TODO тут не должно выводиться слово находящееся на редактировании */}
       <div className="bg-white rounded-lg shadow p-6">
         <h2 className="text-lg font-semibold mb-4">Мои слова</h2>
 
-        {words.map((word, index) => (
-          <div key={index} className="mb-4 p-4 border border-gray-200 rounded">
-            <h3 className="text-xl font-bold">{word.word}</h3>
-            {word.entries.map((entry, idx) => (
-              <div key={idx} className="mt-2 text-sm">
-                <span className="font-medium">{entry.partOfSpeech}</span>
-                <span className="text-gray-500"> (заученность: {entry.proficiency}/10)</span>
-                <div className="mt-1">
-                  {entry.translations.join(', ')}
+        {/* Строка поиска */}
+        <div className="relative mb-4">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={handleSearchChange}
+            placeholder="Начните вводить слово"
+            className="w-full p-3 pl-10 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <svg
+            className="absolute left-3 top-3.5 w-5 h-5 text-gray-400"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+        </div>
+
+        {loading ? (
+          <div className="text-center py-4">Загрузка...</div>
+        ) : words.length === 0 ? (
+          <div className="text-center py-4 text-gray-500">Слов не найдено</div>
+        ) : (
+          words.map((word) => (
+            <div
+              key={word.id}
+              onClick={() => handleEditWord(word)}
+              className="mb-4 p-4 border border-gray-200 rounded relative cursor-pointer hover:bg-gray-50"
+            >
+              {/* Крестик удаления */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  confirmDelete(word.id);
+                }}
+                className="absolute top-2 right-2 text-red-500 hover:text-red-700"
+              >
+                <X size={18} />
+              </button>
+
+              <h3 className="text-xl font-bold">{word.spelling}</h3>
+              <div className="mt-2 text-sm">
+                {Object.entries(word)
+                  .filter(
+                    ([key]) =>
+                      !['id', 'spelling', 'comment', 'memorization', 'changeTime'].includes(key) &&
+                      (word[key as keyof Word] as PartOfSpeech).translations.length > 0
+                  )
+                  .map(([key, part]) => (
+                    <div key={key} className="mt-1">
+                      <span className="font-medium">{partOfSpeechLabels[key as SpeechPartKey]}</span>
+                      <div>{(part as PartOfSpeech).translations.join(', ')}</div>
+                    </div>
+                  ))}
+              </div>
+              {word.comment && (
+                <div className="mt-2 text-xs text-gray-600 italic">
+                  Комментарий: {word.comment}
                 </div>
-              </div>
-            ))}
-            {word.comment && (
-              <div className="mt-2 text-xs text-gray-600 italic">
-                Комментарий: {word.comment}
-              </div>
-            )}
-          </div>
-        ))}
+              )}
+            </div>
+          ))
+        )}
       </div>
+
+      {/* Модалка удаления */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-sm p-6">
+            <h2 className="text-lg font-bold text-center text-gray-800 mb-4">
+              Вы уверены, что хотите удалить слово?
+            </h2>
+            <div className="flex space-x-3">
+              <button
+                onClick={handleDelete}
+                className="flex-1 bg-red-600 text-white py-2 rounded-lg hover:bg-red-700 transition-colors"
+              >
+                Да
+              </button>
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                className="flex-1 bg-gray-200 text-gray-800 py-2 rounded-lg hover:bg-gray-300 transition-colors"
+              >
+                Нет
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Модалка ошибки */}
+      {errorModal.show && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-6">
+            <pre className="whitespace-pre-wrap text-sm text-gray-800 mb-4">
+              {errorModal.message}
+            </pre>
+            <button
+              onClick={() => setErrorModal({ show: false, message: '' })}
+              className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Понятно
+            </button>
+          </div>
+        </div>
+      )}
     </div>
-  )
+  );
 }
