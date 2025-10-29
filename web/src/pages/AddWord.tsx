@@ -47,8 +47,8 @@ export default function AddWord() {
   });
 
   // Валидаторы
-  const isValidEnglish = (value: string): boolean => /^[a-zA-Z\s']*$/.test(value);
-  const isValidRussian = (value: string): boolean => /^[\u0400-\u04FF\s\-.,;:!?()]*$/.test(value);
+  const isValidEnglish = (value: string): boolean => /^[a-z\s']*$/.test(value);
+  const isValidRussian = (value: string): boolean => /^[\u0430-\u044F\u0451\s\-.,;:!?()]*$/.test(value);
 
   // Загрузка слов
   const loadWords = async (query = '') => {
@@ -254,6 +254,15 @@ export default function AddWord() {
     setIsPhrase(isPhrase);
   };
 
+  const getCardColor = (memorization: string): string => {
+    const level = parseInt(memorization, 10);
+    if (isNaN(level)) return 'bg-white'; // fallback
+
+    if (level <= 3) return 'border-l-red-500 bg-red-50';       // 0–3 → красный
+    if (level <= 6) return 'border-l-yellow-500 bg-yellow-50'; // 4–6 → жёлтый
+    return 'border-l-green-500 bg-green-50';                   // 7–10 → зелёный
+  };
+
   return (
     <div className="container mx-auto px-6 py-8">
       {/* Заголовок */}
@@ -441,7 +450,7 @@ export default function AddWord() {
               <div
                 key={word.id}
                 onClick={() => handleEditWord(word)}
-                className="mb-4 p-4 border border-gray-200 rounded relative cursor-pointer hover:bg-gray-50"
+                className={`mb-4 p-4 border-l-4 rounded relative cursor-pointer hover:bg-gray-50 ${getCardColor(word.memorization)}`}
               >
                 {/* Крестик удаления */}
                 <button
