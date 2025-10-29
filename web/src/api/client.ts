@@ -91,6 +91,43 @@ const emptyPart = (): PartOfSpeech => ({
   translations: [],
 });
 
+// Вычисляет memorization для слова
+const calculateMemorization = (word: Word): string => {
+  // Если есть переводы в phrase — это фраза
+  if (word.phrase.translations.length > 0) {
+    return word.phrase.memorization;
+  }
+
+  // Иначе — слово: среднее по частям речи с переводами
+  const speechKeys: (keyof Word)[] = [
+    'noun', 'verb', 'adjective', 'pronoun',
+    'adverb', 'preposition', 'conjunction', 'interjection'
+  ];
+
+  const validMemorizations = speechKeys
+    .map(key => word[key] as PartOfSpeech)
+    .filter(part => part.translations.length > 0)
+    .map(part => parseInt(part.memorization, 10))
+    .filter(val => !isNaN(val));
+
+  if (validMemorizations.length === 0) {
+    return '0';
+  }
+
+  const avg = validMemorizations.reduce((sum, val) => sum + val, 0) / validMemorizations.length;
+  return Math.round(avg).toString();
+};
+
+// Генерация нового ID как max + 1
+const generateNewId = (words: Word[]): string => {
+  if (words.length === 0) return '1';
+  const ids = words.map(w => {
+    const num = parseInt(w.id, 10);
+    return isNaN(num) ? 0 : num;
+  });
+  return (Math.max(...ids) + 1).toString();
+};
+
 export const wordsApi = {
   words: [
     {
@@ -112,7 +149,7 @@ export const wordsApi = {
     {
       id: '2',
       spelling: 'goodbye',
-      phrase:  emptyPart(),
+      phrase: emptyPart(),
       noun: { memorization: '9', translations: ['прощание'] },
       verb: emptyPart(),
       adjective: emptyPart(),
@@ -127,13 +164,22 @@ export const wordsApi = {
     },
   ] as Word[],
 
-  // TODO в word не будет приходить id - нужно сделать так чтобы id генерировалось путем инкрементации самого большого id в списке words
   saveWord(word: Word): Promise<boolean> {
     return new Promise(async (resolve, reject) => {
       await delay(500);
       try {
         maybeThrowError(0, "Возникла ошибка при сохранении, ваши данные не были сохранены.");
-        this.words.push({ ...word, spelling: word.spelling.toLowerCase(), changeTime: new Date() });
+
+        const newId = generateNewId(this.words);
+        const cleanWord = {
+          ...word,
+          id: newId,
+          spelling: word.spelling.toLowerCase(),
+          changeTime: new Date()
+        };
+        cleanWord.memorization = calculateMemorization(cleanWord);
+
+        this.words.push(cleanWord);
         resolve(true);
       } catch (err) {
         reject(err);
@@ -146,33 +192,39 @@ export const wordsApi = {
     maybeThrowError(0, "Возникла ошибка при загрузке слов.");
 
     let filtered = this.words;
-
     if (startedFrom) {
       const query = startedFrom.toLowerCase();
       filtered = this.words.filter(word => word.spelling.toLowerCase().startsWith(query));
     }
 
-    const sorted = filtered
+    return filtered
       .slice()
-      .sort((a, b) => b.changeTime.getTime() - a.changeTime.getTime());
-
-    return sorted.slice(0, wordCount);
+      .sort((a, b) => b.changeTime.getTime() - a.changeTime.getTime())
+      .slice(0, wordCount);
   },
 
-  async updateWord(id: string): Promise<void> {
+  async updateWord(updatedWord: Word): Promise<void> {
     await delay(300);
     maybeThrowError(0, "Возникла ошибка при обновлении слова. Ваши данные не были сохранены");
 
-    const index = this.words.findIndex(w => w.id === id);
+    const index = this.words.findIndex(w => w.id === updatedWord.id);
     if (index === -1) {
       throw new Error('Слово не найдено. Такого быть не должно! Обратитесь к разработчику.');
     }
-    this.words[index] = { ...this.words[index], changeTime: new Date() };
+
+    // Обновляем changeTime и пересчитываем memorization
+    const finalWord = {
+      ...updatedWord,
+      changeTime: new Date(),
+      memorization: calculateMemorization(updatedWord)
+    };
+
+    this.words[index] = finalWord;
   },
 
   async deleteWord(id: string): Promise<void> {
     await delay(300);
-    maybeThrowError(0, "Возникла ошибка при удалении слова. Данные не были удаленны.");
+    maybeThrowError(0, "Возникла ошибка при удалении слова. Данные не были удалены.");
 
     const initialLength = this.words.length;
     this.words = this.words.filter(w => w.id !== id);
