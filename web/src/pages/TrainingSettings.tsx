@@ -70,6 +70,7 @@ export default function TrainingSettings() {
   }, [])
 
   // Debounced сохранение НА СЕРВЕР
+  // вызывает debounce в хуке useCallback - тем самым создет функцию единожды, таким образом мы имеем один timeout - который обновляется при каждом вызове, тоесть при кажом изменении
   const debouncedSaveToServer = useCallback(
     debounce(async (newSettings: TrainingSettings[]) => {
       try {
