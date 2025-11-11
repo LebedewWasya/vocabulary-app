@@ -1,8 +1,8 @@
-// src/pages/TrainingSettings.tsx
+// Info не стал сюда добавлять тему с выводом ошибки от апи в виде модального окна - в лучшем случае данные норм сохранятся в локал сторейдж. Ес че с сервером - упадет в других апи
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { trainingSettingsApi } from '../api/client'
-import type { TrainingSettings } from '../objecttypes'
+import type { TrainingSettings } from '../types'
 
 const LOCAL_STORAGE_KEY = 'trainingSettings'
 
@@ -10,9 +10,8 @@ export default function TrainingSettings() {
   const navigate = useNavigate()
   const [settings, setSettings] = useState<TrainingSettings[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [lastUpdated, setLastUpdated] = useState<Date>(new Date())
 
-    // Загрузка данных
+  // Загрузка данных
   useEffect(() => {
     const loadSettings = async () => {
       try {
@@ -36,10 +35,7 @@ export default function TrainingSettings() {
 
         // 3. Выбираем более актуальные данные
         const finalSettings = localDate > serverDate ? localSettings : serverSettings
-        const finalDate = localDate > serverDate ? localDate : serverDate
-
         setSettings(finalSettings)
-        setLastUpdated(finalDate)
       } catch (error) {
         console.error('Failed to load settings', error)
         // Fallback к локальным данным
@@ -48,7 +44,6 @@ export default function TrainingSettings() {
           try {
             const parsed = JSON.parse(localData)
             setSettings(parsed.settings)
-            setLastUpdated(new Date(parsed.timestamp))
           } catch (e) {
             console.warn('Failed to load local settings')
           }
@@ -61,29 +56,30 @@ export default function TrainingSettings() {
     loadSettings()
   }, [])
 
-  // Debounced сохранение
-  const debouncedSave = useCallback(
-    debounce(async (newSettings: TrainingSettings[]) => {
-      try {
-        // Сохраняем на сервере
-        await trainingSettingsApi.saveSettings(newSettings)
+  // Вспомогательная функция для debounce
+  function debounce<F extends (...args: any[]) => any>(
+    func: F,
+    waitFor: number
+  ): (...args: Parameters<F>) => void {
+    let timeout: ReturnType<typeof setTimeout> | null = null
 
-        // Сохраняем в localStorage с временной меткой
-        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({
-          settings: newSettings,
-          timestamp: new Date().toISOString()
-        }))
-      } catch (error) {
-        console.error('Failed to save settings', error)
-        // В случае ошибки всё равно сохраняем локально
-        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({
-          settings: newSettings,
-          timestamp: new Date().toISOString()
-        }))
+    return (...args: Parameters<F>) => {
+      if (timeout !== null) {
+        clearTimeout(timeout)
       }
-    }, 1500),
-    []
-  )
+      timeout = setTimeout(() => func(...args), waitFor)
+    }
+  }
+
+  // Debounced сохранение НА СЕРВЕР
+  // вызывает debounce в хуке useCallback - тем самым создет функцию единожды, таким образом мы имеем один timeout - который обновляется при каждом вызове
+  const debouncedSaveToServer = useCallback(debounce(async (newSettings: TrainingSettings[]) => {
+    try {
+      await trainingSettingsApi.saveSettings(newSettings)
+    } catch (error) {
+      console.error('Failed to save to server', error)
+    }
+  }, 3000), [])
 
   // Обработчики изменений
   const handleSelect = (id: string) => {
@@ -92,7 +88,15 @@ export default function TrainingSettings() {
       isSelected: setting.id === id
     }))
     setSettings(newSettings)
-    debouncedSave(newSettings)
+
+    // СРАЗУ сохраняем в localStorage
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({
+      settings: newSettings,
+      timestamp: new Date().toISOString()
+    }))
+
+    // Асинхронно сохраняем на сервер
+    debouncedSaveToServer(newSettings)
   }
 
   const updateSetting = (id: string, field: keyof TrainingSettings, value: any) => {
@@ -100,7 +104,15 @@ export default function TrainingSettings() {
       setting.id === id ? { ...setting, [field]: value } : setting
     )
     setSettings(newSettings)
-    debouncedSave(newSettings)
+
+    // СРАЗУ сохраняем в localStorage
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({
+      settings: newSettings,
+      timestamp: new Date().toISOString()
+    }))
+
+    // Асинхронно сохраняем на сервер
+    debouncedSaveToServer(newSettings)
   }
 
   const handleStartTraining = () => {
@@ -224,19 +236,4 @@ export default function TrainingSettings() {
       </button>
     </div>
   )
-}
-
-// Вспомогательная функция для debounce
-function debounce<F extends (...args: any[]) => any>(
-  func: F,
-  waitFor: number
-): (...args: Parameters<F>) => void {
-  let timeout: ReturnType<typeof setTimeout> | null = null
-
-  return (...args: Parameters<F>) => {
-    if (timeout !== null) {
-      clearTimeout(timeout)
-    }
-    timeout = setTimeout(() => func(...args), waitFor)
-  }
 }
