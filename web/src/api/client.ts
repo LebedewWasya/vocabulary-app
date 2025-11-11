@@ -275,6 +275,7 @@ let settingsUpdatedAt = new Date('2025-04-15T10:00:00Z')
 export const trainingSettingsApi = {
   // Получить настройки из "сервера"
   getSettings: async (): Promise<{ settings: TrainingSettings[]; updatedAt: Date }> => {
+    maybeThrowError(0, "Возникла ошибка при получении настроек.");
     await delay(300)
     return {
       settings: trainingSettingsData,
@@ -285,6 +286,7 @@ export const trainingSettingsApi = {
   // Сохранить настройки
   saveSettings: async (newSettings: TrainingSettings[]): Promise<void> => {
     console.log("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA saveSettings AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+    maybeThrowError(0, "Возникла ошибка при сохранении настроек, ваши данные не были сохранены.");
     await delay(200)
     // Обновляем глобальный массив
     trainingSettingsData = [...newSettings]
