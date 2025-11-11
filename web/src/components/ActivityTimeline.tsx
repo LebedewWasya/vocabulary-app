@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { Check, X } from 'lucide-react';
 
-import type { DatePeriod, ActivityPak } from '../types'
+import type { DatePeriod, ActivityPak } from '../objecttypes'
 import { activityApi } from '../api/client'
 
 function getSundayOfNextWeek(nowDate: Date): Date {

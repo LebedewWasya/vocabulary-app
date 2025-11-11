@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { authApi } from '../api/client'
-import type { User } from '../types'
+import type { User } from '../objecttypes'
 
 export const useAuth = () => {
   const getUser = () => {

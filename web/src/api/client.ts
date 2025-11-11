@@ -1,7 +1,7 @@
 //  настоящий бэкенд будет на http://localhost:8080/api
 // Сейчас эмулируем ответы через setTimeout
 
-import type { Word, User, DatePeriod, ActivityPak, PartOfSpeech } from '../types'
+import type { Word, User, DatePeriod, ActivityPak, PartOfSpeech, TrainingSettings } from '../objecttypes'
 
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms))
 
@@ -234,6 +234,67 @@ export const wordsApi = {
   },
 };
 // Имитация работы со словарем ======================================================================================================================
+
+// Имитация работы с настройками тренировки ======================================================================================================================
+
+// Глобальное хранилище настроек (заглушка вместо сервера)
+let trainingSettingsData: TrainingSettings[] = [
+  {
+    id: 'basic',
+    name: 'Базовая тренировка',
+    description: 'Классический режим повторения слов',
+    isSelected: true,
+    wordCount: 10,
+    shuffleMistakes: true,
+    penalty: 2
+  },
+  {
+    id: 'advanced',
+    name: 'Продвинутая тренировка',
+    description: 'Все части речи + повышенная сложность',
+    isSelected: false,
+    wordCount: 15,
+    shuffleMistakes: true,
+    penalty: 5
+  },
+  {
+    id: 'sprint',
+    name: 'Спринт',
+    description: 'Быстрый режим на время',
+    isSelected: false,
+    wordCount: 5,
+    shuffleMistakes: false,
+    penalty: 1
+  }
+]
+
+// Общая дата обновления для всех настроек
+let settingsUpdatedAt = new Date('2025-04-15T10:00:00Z')
+
+// Заглушка для получения настроек тренировки
+export const trainingSettingsApi = {
+  // Получить настройки из "сервера"
+  getSettings: async (): Promise<{ settings: TrainingSettings[]; updatedAt: Date }> => {
+    await delay(300)
+    return {
+      settings: trainingSettingsData,
+      updatedAt: settingsUpdatedAt
+    }
+  },
+
+  // Сохранить настройки
+  saveSettings: async (newSettings: TrainingSettings[]): Promise<void> => {
+    console.log("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA saveSettings AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+    await delay(200)
+    // Обновляем глобальный массив
+    trainingSettingsData = [...newSettings]
+    // Обновляем общую дату для всех настроек
+    settingsUpdatedAt = new Date()
+    console.log('Настройки обновлены:', trainingSettingsData)
+  }
+}
+
+// Имитация работы с настройками тренировки ======================================================================================================================
 
 // Имитация тренировки
 // export const trainingApi = {

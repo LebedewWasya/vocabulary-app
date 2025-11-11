@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { wordsApi } from '../api/client'
-import type { Word, WordEntry } from '../types'
+import type { Word, WordEntry } from '../objecttypes'
 
 export const useWords = () => {
   const [words, setWords] = useState<Word[]>([])

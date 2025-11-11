@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { wordsApi } from '../api/client';
-import type { Word, PartOfSpeech } from '../types';
+import type { Word, PartOfSpeech } from '../objecttypes';
 
 const BASIC_COUNT_WORD_ON_PAGE: number = 5;
 const ENABLE_LOGGING: boolean = true;
