@@ -1,4 +1,4 @@
-// Info не стал сюда добавлять тему с выводом ошибки от апи в виде модального окна - в лучшем случае данные норм сохранятся в локал сторейдж. Ес че с сервером - упадет в других апи
+// src/pages/TrainingSettings.tsx
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { trainingSettingsApi } from '../api/client'
@@ -10,6 +10,17 @@ export default function TrainingSettings() {
   const navigate = useNavigate()
   const [settings, setSettings] = useState<TrainingSettings[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [errorModal, setErrorModal] = useState<{ show: boolean; message: string }>({
+    show: false,
+    message: '',
+  })
+
+  const showError = (message: string) => {
+    setErrorModal({
+      show: true,
+      message: `Извините, что-то пошло не так.\n${message}\n\nОбратитесь за помощью к разработчику.`,
+    })
+  }
 
   // Загрузка данных
   useEffect(() => {
@@ -38,6 +49,8 @@ export default function TrainingSettings() {
         setSettings(finalSettings)
       } catch (error) {
         console.error('Failed to load settings', error)
+        showError((error as Error).message || 'Не удалось загрузить настройки')
+
         // Fallback к локальным данным
         const localData = localStorage.getItem(LOCAL_STORAGE_KEY)
         if (localData) {
@@ -56,30 +69,18 @@ export default function TrainingSettings() {
     loadSettings()
   }, [])
 
-  // Вспомогательная функция для debounce
-  function debounce<F extends (...args: any[]) => any>(
-    func: F,
-    waitFor: number
-  ): (...args: Parameters<F>) => void {
-    let timeout: ReturnType<typeof setTimeout> | null = null
-
-    return (...args: Parameters<F>) => {
-      if (timeout !== null) {
-        clearTimeout(timeout)
-      }
-      timeout = setTimeout(() => func(...args), waitFor)
-    }
-  }
-
   // Debounced сохранение НА СЕРВЕР
-  // вызывает debounce в хуке useCallback - тем самым создет функцию единожды, таким образом мы имеем один timeout - который обновляется при каждом вызове
-  const debouncedSaveToServer = useCallback(debounce(async (newSettings: TrainingSettings[]) => {
-    try {
-      await trainingSettingsApi.saveSettings(newSettings)
-    } catch (error) {
-      console.error('Failed to save to server', error)
-    }
-  }, 3000), [])
+  const debouncedSaveToServer = useCallback(
+    debounce(async (newSettings: TrainingSettings[]) => {
+      try {
+        await trainingSettingsApi.saveSettings(newSettings)
+      } catch (error) {
+        console.error('Failed to save to server', error)
+        showError((error as Error).message || 'Не удалось сохранить настройки на сервере')
+      }
+    }, 3000),
+    []
+  )
 
   // Обработчики изменений
   const handleSelect = (id: string) => {
@@ -234,6 +235,38 @@ export default function TrainingSettings() {
       >
         Начать тренировку
       </button>
+
+      {/* Модалка ошибки */}
+      {errorModal.show && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-6">
+            <pre className="whitespace-pre-wrap text-sm text-gray-800 mb-4">
+              {errorModal.message}
+            </pre>
+            <button
+              onClick={() => setErrorModal({ show: false, message: '' })}
+              className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Понятно
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
+}
+
+// Вспомогательная функция для debounce
+function debounce<F extends (...args: any[]) => any>(
+  func: F,
+  waitFor: number
+): (...args: Parameters<F>) => void {
+  let timeout: ReturnType<typeof setTimeout> | null = null
+
+  return (...args: Parameters<F>) => {
+    if (timeout !== null) {
+      clearTimeout(timeout)
+    }
+    timeout = setTimeout(() => func(...args), waitFor)
+  }
 }
