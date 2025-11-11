@@ -241,8 +241,8 @@ export const wordsApi = {
 let trainingSettingsData: TrainingSettings[] = [
   {
     id: 'basic',
-    name: 'Базовая тренировка',
-    description: 'Классический режим повторения слов',
+    name: 'Режим с карточками',
+    description: 'Режим в котором будет предложено на выбор несколько карточек - нужно выбрать ту котторая относится к представленному английскому слову',
     isSelected: true,
     wordCount: 10,
     shuffleMistakes: true,
@@ -250,17 +250,26 @@ let trainingSettingsData: TrainingSettings[] = [
   },
   {
     id: 'advanced',
-    name: 'Продвинутая тренировка',
-    description: 'Все части речи + повышенная сложность',
+    name: 'Режим с одной частью речи',
+    description: 'Режим в котором нужно вспомнить все переводы английского слова в рамках определенной части речи',
     isSelected: false,
     wordCount: 15,
     shuffleMistakes: true,
     penalty: 5
   },
   {
-    id: 'sprint',
-    name: 'Спринт',
-    description: 'Быстрый режим на время',
+    id: 'hard',
+    name: 'Режим со всеми частями речи',
+    description: 'Режим в котором нужно вспомнить все переводы английского слова',
+    isSelected: false,
+    wordCount: 5,
+    shuffleMistakes: false,
+    penalty: 1
+  },
+  {
+    id: 'inverse',
+    name: 'Инверсивный режим',
+    description: 'Режим в котором вам будет дано русской слово, нужно вспомнить все его переводы на английском',
     isSelected: false,
     wordCount: 5,
     shuffleMistakes: false,
